@@ -3,7 +3,7 @@ from typing import List, Optional
 import json
 
 class Task:
-    def init(self, title: str, description: str = "", deadline: Optional[datetime] = None, priority: int = 1):
+    def __init__(self, title: str, description: str = "", deadline: Optional[datetime] = None, priority: int = 1):
         self.id = id(self)
         self.title = title
         self.description = description
@@ -24,31 +24,31 @@ class Task:
             self.deadline = deadline
         if priority:
             self.priority = priority
-
-class TaskManager:
-    def init(self):
-        self.tasks: List[Task] = []
-
-    def add_task(self, task: Task):
-        self.tasks.append(task)
-
-    def delete_task(self, task_id: int):
-        self.tasks = [t for t in self.tasks if t.id != task_id]
-
-    def get_all_tasks(self):
-        return self.tasks
-
-    def get_completed_tasks(self):
-        return [t for t in self.tasks if t.completed]
-
-    def sort_by_priority(self):
-        return sorted(self.tasks, key=lambda t: t.priority)
-
-    def sort_by_deadline(self):
-        return sorted(self.tasks, key=lambda t: t.deadline or datetime.max)
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "deadline": self.deadline.isoformat() if self.deadline else None,
+            "priority": self.priority,
+            "completed": self.completed,
+            "created_at": self.created_at.isoformat()
+        }
+    @staticmethod
+    def from_dict(data):
+        task = Task(
+            title = data["title"],
+            description= data["description"],
+            deadline = datetime.fromisoformat(data["deadline"]) if data["deadline"] else None,
+            priority = data["priority"]
+        )
+        task.id = int(data["id"])
+        task.completed = data["completed"]
+        task.correct_deadline = datetime.fromisoformat(data["created_at"])
+        return task
 
 class FocusSession:
-    def init(self, duration_minutes: int = 25):
+    def __init__(self, duration_minutes: int = 25):
         self.start_time: Optional[datetime] = None
         self.end_time: Optional[datetime] = None
         self.duration = timedelta(minutes=duration_minutes)
@@ -67,7 +67,7 @@ class FocusSession:
         return None
 
 class FocusTimer:
-    def init(self):
+    def __init__(self):
         self.current_session: Optional[FocusSession] = None
         self.history: List[FocusSession] = []
 
@@ -85,7 +85,7 @@ class FocusTimer:
         return self.history
 
 class Flashcard:
-    def init(self, question: str, answer: str):
+    def __init__(self, question: str, answer: str):
         self.id = id(self)
         self.question = question
         self.answer = answer
@@ -102,7 +102,7 @@ class Flashcard:
         self.next_review = datetime.now() + timedelta(days=self.interval)
 
 class FlashcardDeck:
-    def init(self):
+    def __init__(self):
         self.cards: List[Flashcard] = []
 
     def add_card(self, card: Flashcard):
@@ -116,7 +116,7 @@ class FlashcardDeck:
         return [c for c in self.cards if c.next_review <= now]
 
 class ProgressTracker:
-    def init(self, task_manager: TaskManager, timer: FocusTimer, deck: FlashcardDeck):
+    def __init__(self, task_manager: TaskManager, timer: FocusTimer, deck: FlashcardDeck):
         self.task_manager = task_manager
         self.timer = timer
         self.deck = deck
@@ -145,8 +145,41 @@ class DataManager:
     def save_tasks(self, tasks: List[Task], filename="tasks.json"):
         data = [vars(t) for t in tasks]
         with open(filename, "w") as f:
-            json.dump(data, f, default=str)
+            json.dump(data, f, indent=4)
 
-    def load_tasks(self, filename="tasks.json"):
-        with open(filename, "r") as f:
-            return json.load(f)
+    def load_tasks(self, filename="tasks.json") -> List[Task]:
+        try:
+            with open(filename, "r") as f:
+                data = json.load(f)
+                return [Task.from_dict(d) for d in data]
+        except FileNotFoundError:
+            return []
+
+class TaskManager:
+    def __init__(self):
+        self.tasks: List[Task] = []
+        self.data_manager = DataManager()
+
+    def add_task(self, task: Task):
+        self.tasks.append(task)
+
+    def delete_task(self, task_id: int):
+        self.tasks = [t for t in self.tasks if t.id != task_id]
+
+    def get_all_tasks(self):
+        return self.tasks
+
+    def get_completed_tasks(self):
+        return [t for t in self.tasks if t.completed]
+
+    def sort_by_priority(self):
+        return sorted(self.tasks, key=lambda t: t.priority)
+
+    def sort_by_deadline(self):
+        return sorted(self.tasks, key=lambda t: t.deadline or datetime.max)
+
+    def load(self):
+        self.tasks = self.data_manager.load_tasks()
+
+    def save(self):
+        self.data_manager.save_tasks(self.tasks)
