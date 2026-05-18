@@ -1,30 +1,39 @@
-from python.managers.task_manager import TaskManager
-from python.models.flashcard import FlashcardDeck
-from python.models.focus_timer import FocusTimer
+from sql.database import get_connection
+from python.models.flashcard import Flashcard
+from datetime import datetime
 
+class FlashcardManager:
+    def add_flashcard(self, card: Flashcard):
+        connection = get_connection()
+        cursor = connection.cursor()
 
-class ProgressTracker:
-    def __init__(self, task_manager: TaskManager, timer: FocusTimer, deck: FlashcardDeck):
-        self.task_manager = task_manager
-        self.timer = timer
-        self.deck = deck
+        cursor.execute('''INSERT INTO flashcards(question, answer, interval_days, next_review, last_reviewed)
+        VALUES (?, ?, ?, ?, ?)''', (
+            card.question,
+            card.answer,
+            card.interval,
+            card.next_review.isoformat(),
+            card.last_reviewed.isoformat() if card.last_reviewed else None,
+        ))
 
-    def get_task_stats(self):
-        total = len(self.task_manager.tasks)
-        completed = len(self.task_manager.get_completed_tasks())
-        return {"total_tasks": total, "completed_tasks": completed}
+        connection.commit()
+        connection.close()
 
-    def get_focus_stats(self):
-        sessions = self.timer.get_history()
-        total_time = sum((s.get_duration() for s in sessions if s.get_duration()), timedelta())
+    def load_cards(self):
+        connection = get_connection()
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM flashcards")
 
-        return {
-            "total_sessions": len(sessions),
-            "total_time": total_time
-        }
+        rows = cursor.fetchall()
 
-    def get_flashcard_stats(self):
-        return {
-            "total_cards": len(self.deck.cards),
-            "due_cards": len(self.deck.get_due_cards())
-        }
+        cards = []
+        for row in rows:
+            card = Flashcard(row[1],row[2])
+            card.id = row[0]
+            card.interval = row[3]
+            card.next_review = datetime.fromisoformat(row[4])
+            if row[5]:
+                card.last_reviewed = datetime.fromisoformat(row[5])
+            cards.append(card)
+        connection.close()
+        return cards

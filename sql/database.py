@@ -1,7 +1,10 @@
 import sqlite3
-
-connection = sqlite3.connect('study_mate.db')
+db_name = 'study_mate.db'
+connection = sqlite3.connect(db_name)
 cursor = connection.cursor()
+
+def get_connection():
+    return sqlite3.connect(db_name)
 
 cursor.execute('''CREATE TABLE IF NOT EXISTS tasks(
     id INTEGER PRIMARY KEY AUTOINCREMENT,

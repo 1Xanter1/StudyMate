@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import List, Optional
+from sql.database import get_connection
 
 class Flashcard:
     def __init__(self, question: str, answer: str):
@@ -24,6 +25,7 @@ class FlashcardDeck:
 
     def add_card(self, card: Flashcard):
         self.cards.append(card)
+
 
     def delete_card(self, card_id: int):
         self.cards = [c for c in self.cards if c.id != card_id]
