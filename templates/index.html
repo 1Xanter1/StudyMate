@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyMate</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="bg-mesh"></div>
+  <div class="app-grid">
+    <aside class="col col-stats" data-panel="1">
+      <div class="col-label">Прогресс</div>
+      <div class="mini-stats">
+        <div class="mini-stat"><b id="statCompleted">0</b><span>задач</span></div>
+        <div class="mini-stat"><b id="statMinutes">0</b><span>мин</span></div>
+        <div class="mini-stat"><b id="statSessions">0</b><span>сессий</span></div>
+        <div class="mini-stat"><b id="statReviews">0</b><span>повтор.</span></div>
+      </div>
+      <div class="mini-bar"><div class="mini-fill" id="taskProgressBar"></div></div>
+      <ul class="mini-overview">
+        <li><span>Ожидают</span><b id="pendingCount">0</b></li>
+        <li><span>К повторению</span><b id="dueCount">0</b></li>
+        <li><span>Карточек</span><b id="totalCardsCount">0</b></li>
+      </ul>
+      <ul id="recentSessions" class="scroll-list session-list"></ul>
+    </aside>
+
+    <section class="col col-tasks" data-panel="2">
+      <div class="col-label">Задачи</div>
+      <form id="taskForm" class="inline-form">
+        <input type="text" id="taskTitle" placeholder="Задача" required maxlength="200">
+        <select id="taskPriority">
+          <option value="high">Высокий</option>
+          <option value="medium" selected>Средний</option>
+          <option value="low">Низкий</option>
+        </select>
+        <input type="date" id="taskDeadline">
+        <button type="submit" class="btn btn-primary btn-xs">+</button>
+      </form>
+      <div class="sort-row">
+        <button class="sort-btn active" data-sort="deadline">Дедлайн</button>
+        <button class="sort-btn" data-sort="priority">Приоритет</button>
+      </div>
+      <ul id="taskList" class="scroll-list task-list"></ul>
+      <p id="emptyTasks" class="empty hidden">—</p>
+    </section>
+
+    <section class="col col-timer" data-panel="3">
+      <div class="col-label">Фокус</div>
+      <div class="timer-ring-wrap">
+        <svg class="timer-ring" viewBox="0 0 160 160">
+          <circle class="ring-bg" cx="80" cy="80" r="70"/>
+          <circle class="ring-progress" id="ringProgress" cx="80" cy="80" r="70"/>
+        </svg>
+        <div class="timer-display"><span id="timerDisplay">25:00</span></div>
+      </div>
+      <form id="timerForm" class="timer-form">
+        <input type="number" id="timerMinutes" value="25" min="1" max="180" placeholder="Минут">
+        <button type="submit" id="timerStart" class="btn btn-primary btn-xs">Старт</button>
+        <button type="button" id="timerPause" class="btn btn-ghost btn-xs" disabled>⏸</button>
+        <button type="button" id="timerReset" class="btn btn-ghost btn-xs">↺</button>
+      </form>
+      <ul id="sessionHistory" class="scroll-list session-list"></ul>
+    </section>
+
+    <section class="col col-cards" data-panel="4">
+      <div class="col-label">Карточки</div>
+      <form id="cardForm" class="card-create-form">
+        <input type="text" id="cardFront" placeholder="Вопрос / термин" required maxlength="300">
+        <input type="text" id="cardBack" placeholder="Ответ / определение" required maxlength="1000">
+        <button type="submit" class="btn btn-primary btn-xs">Добавить</button>
+      </form>
+      <div class="cards-body">
+        <div class="cards-library">
+          <div class="cards-lib-head">
+            <span>Библиотека</span>
+            <span id="libraryCount">0</span>
+          </div>
+          <ul id="cardLibrary" class="scroll-list library-list"></ul>
+          <p id="libraryEmpty" class="empty-msg">Нет карточек</p>
+        </div>
+        <div class="cards-review">
+          <div class="review-head">
+            <span id="reviewStatus">К повторению: 0</span>
+            <button type="button" id="startReview" class="btn btn-primary btn-xs">Повторить</button>
+          </div>
+          <div id="reviewIdle" class="review-idle">
+            <p>Создайте карточку и нажмите «Повторить»</p>
+          </div>
+          <div id="reviewArea" class="review-area hidden">
+            <div class="review-progress" id="reviewProgress">1 / 1</div>
+            <div class="flashcard" id="flashcard">
+              <div class="card-side front" id="cardFaceFront"></div>
+              <div class="card-side back hidden" id="cardFaceBack"></div>
+            </div>
+            <p class="flip-hint" id="flipHint">Нажмите на карточку — показать ответ</p>
+            <div class="review-actions hidden" id="reviewActions">
+              <button type="button" id="btnWrong" class="btn btn-danger">Не помню</button>
+              <button type="button" id="btnCorrect" class="btn btn-success">Помню</button>
+            </div>
+          </div>
+          <p id="reviewDone" class="review-done hidden">Повторение завершено</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="editModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <form id="editForm">
+        <input type="hidden" id="editId">
+        <input type="text" id="editTitle" required>
+        <select id="editPriority">
+          <option value="high">Высокий</option>
+          <option value="medium">Средний</option>
+          <option value="low">Низкий</option>
+        </select>
+        <input type="date" id="editDeadline">
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost btn-xs" id="editCancel">✕</button>
+          <button type="submit" class="btn btn-primary btn-xs">✓</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
